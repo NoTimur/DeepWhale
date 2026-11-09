@@ -315,38 +315,6 @@ CREATE TABLE stock_snapshot (
 | Visualisation | Grafana Ops (observability); web dashboard planned |
 | Tooling | Git, psql, Airflow UI |
 
-## Quick start
-
-Requirements: Python 3.14, Apache Airflow 3.x with the PostgreSQL provider, and a running PostgreSQL instance.
-
-```bash
-git clone https://github.com/NoTimur/DeepWhale.git
-cd DeepWhale
-
-python3 -m venv .venv
-source .venv/bin/activate
-
-# Create the analytics schema: open psql and paste the DDL from Database schema
-psql -h localhost -U crypto_app -d crypto
-```
-
-Configure Airflow:
-
-1. Point `dags_folder` at `./airflow/dags`.
-2. Create a PostgreSQL connection `crypto_postgres` to the `crypto` database.
-3. For the stock DAG, create an HTTP connection `twelve_data` with host `https://api.twelvedata.com` and the API key as password.
-4. Hyperliquid needs **no API key**.
-
-Start Airflow:
-
-```bash
-airflow standalone
-```
-
-Open `http://localhost:8080`, enable the DAGs and trigger `wallets_snapshot` first. The positions and fills DAGs read wallet addresses from `hl_top_wallets`, so the wallet DAG should run before them.
-
-> Secrets are intentionally excluded from the repository. `API.txt`, `ariflow_password.txt` and `.env` are git-ignored.
-
 ## Dashboard
 
 > **Coming soon.**
