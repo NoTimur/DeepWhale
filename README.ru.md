@@ -67,6 +67,8 @@ Fills загружаются инкрементально: DAG берёт `max(t
 
 ## Схема БД
 
+### Hyperliquid-домен
+
 ```mermaid
 erDiagram
     hl_top_wallets ||--o{ hl_positions : "address"
@@ -166,7 +168,131 @@ CREATE INDEX hl_positions_coin_snapshot_idx
 
 </details>
 
-Вспомогательные таблицы рыночных данных: `coins` + `coin_snapshot` для CoinGecko, `stocks` + `stock_snapshot` для акций США.
+### Рыночные данные
+
+```mermaid
+erDiagram
+    coins ||--o{ coin_snapshot : id
+    coins ||--o| coin_details : id
+    stocks ||--o{ stock_snapshot : symbol
+
+    coins {
+        text id PK
+        text ticker
+        text name
+    }
+
+    coin_details {
+        text id PK
+        text description
+        text image_url
+        date genesis_date
+        jsonb categories
+        jsonb links
+    }
+
+    coin_snapshot {
+        timestamptz snapshot_at PK
+        text id PK
+        numeric current_price
+        numeric market_cap
+        integer market_cap_rank
+        numeric total_volume
+        numeric high24hr
+        numeric low24hr
+        numeric price_change_pct_24h
+        numeric price_change_pct_7d
+        numeric price_change_pct_30d
+    }
+
+    stocks {
+        text symbol PK
+        text name
+        text exchange
+        text mic_code
+        text currency
+        text instrument_type
+        boolean is_active
+    }
+
+    stock_snapshot {
+        timestamptz snapshot_at PK
+        text symbol PK
+        numeric price
+        numeric change
+        numeric percent_change
+        bigint volume
+        boolean is_market_open
+    }
+```
+
+| Таблица | Гранулярность | За что отвечает |
+|---|---|---|
+| `coins` | одна строка на актив | справочник CoinGecko: id, тикер, название |
+| `coin_details` | одна строка на актив | опциональные метаданные: описание, картинка, ссылки, категории |
+| `coin_snapshot` | актив × снимок | цена, капитализация, ранг, объём и изменения за 24ч/7д/30д |
+| `stocks` | одна строка на тикер | справочник акций США: символ, биржа, валюта, тип |
+| `stock_snapshot` | тикер × снимок | цена, изменение, объём и флаг открытой сессии |
+
+<details>
+<summary><strong>SQL DDL — рыночные данные</strong></summary>
+
+```sql
+CREATE TABLE coins (
+    id      text PRIMARY KEY,
+    ticker  text NOT NULL,
+    name    text NOT NULL
+);
+
+CREATE TABLE coin_details (
+    id            text PRIMARY KEY REFERENCES coins(id) ON DELETE CASCADE,
+    description   text,
+    image_url     text,
+    genesis_date  date,
+    categories    jsonb,
+    links         jsonb
+);
+
+CREATE TABLE coin_snapshot (
+    snapshot_at           timestamptz NOT NULL,
+    id                    text NOT NULL REFERENCES coins(id),
+    current_price         numeric,
+    market_cap            numeric,
+    market_cap_rank       integer,
+    total_volume          numeric,
+    high24hr              numeric,
+    low24hr               numeric,
+    price_change_pct_24h  numeric,
+    price_change_pct_7d   numeric,
+    price_change_pct_30d  numeric,
+    PRIMARY KEY (id, snapshot_at)
+);
+
+CREATE TABLE stocks (
+    symbol           text PRIMARY KEY,
+    name             text NOT NULL,
+    exchange         text NOT NULL,
+    mic_code         text,
+    currency         text NOT NULL,
+    instrument_type  text NOT NULL DEFAULT 'Common Stock',
+    is_active        boolean NOT NULL DEFAULT true,
+    created_at       timestamptz NOT NULL DEFAULT now(),
+    updated_at       timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE stock_snapshot (
+    snapshot_at     timestamptz NOT NULL,
+    symbol          text NOT NULL REFERENCES stocks(symbol),
+    price           numeric(18, 6),
+    change          numeric(18, 6),
+    percent_change  numeric(10, 4),
+    volume          bigint,
+    is_market_open  boolean,
+    PRIMARY KEY (symbol, snapshot_at)
+);
+```
+
+</details>
 
 ## Стек
 
@@ -251,12 +377,3 @@ Grafana — следующий этап. Планируемые экраны:
 
 DeepWhale — учебный и исследовательский проект. Он не даёт инвестиционных рекомендаций и не исполняет сделки. Публичные on-chain данные могут быть неполными, запаздывать или вводить в заблуждение. Прошлая доходность любого кошелька не гарантирует будущую.
 
----
-
-<div align="center">
-
-Сделано из любопытства, SQL и уважения к лимитам API.
-
-[English version](README.md)
-
-</div>

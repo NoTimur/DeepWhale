@@ -67,6 +67,8 @@ Fills are loaded incrementally: the DAG reads `max(ts)` per wallet, subtracts a 
 
 ## Database schema
 
+### Hyperliquid domain
+
 ```mermaid
 erDiagram
     hl_top_wallets ||--o{ hl_positions : "address"
@@ -166,7 +168,131 @@ CREATE INDEX hl_positions_coin_snapshot_idx
 
 </details>
 
-Supporting market-data tables: `coins` + `coin_snapshot` for CoinGecko, `stocks` + `stock_snapshot` for US equities.
+### Market data domain
+
+```mermaid
+erDiagram
+    coins ||--o{ coin_snapshot : id
+    coins ||--o| coin_details : id
+    stocks ||--o{ stock_snapshot : symbol
+
+    coins {
+        text id PK
+        text ticker
+        text name
+    }
+
+    coin_details {
+        text id PK
+        text description
+        text image_url
+        date genesis_date
+        jsonb categories
+        jsonb links
+    }
+
+    coin_snapshot {
+        timestamptz snapshot_at PK
+        text id PK
+        numeric current_price
+        numeric market_cap
+        integer market_cap_rank
+        numeric total_volume
+        numeric high24hr
+        numeric low24hr
+        numeric price_change_pct_24h
+        numeric price_change_pct_7d
+        numeric price_change_pct_30d
+    }
+
+    stocks {
+        text symbol PK
+        text name
+        text exchange
+        text mic_code
+        text currency
+        text instrument_type
+        boolean is_active
+    }
+
+    stock_snapshot {
+        timestamptz snapshot_at PK
+        text symbol PK
+        numeric price
+        numeric change
+        numeric percent_change
+        bigint volume
+        boolean is_market_open
+    }
+```
+
+| Table | Grain | Responsibility |
+|---|---|---|
+| `coins` | one row per asset | CoinGecko reference: CoinGecko id, ticker, name |
+| `coin_details` | one row per asset | optional metadata: description, image, links, categories |
+| `coin_snapshot` | asset × snapshot | price, market cap, rank, volume and 24h/7d/30d changes |
+| `stocks` | one row per ticker | US equity reference: symbol, exchange, currency, type |
+| `stock_snapshot` | ticker × snapshot | quote price, change, volume and market-open flag |
+
+<details>
+<summary><strong>SQL DDL — market data</strong></summary>
+
+```sql
+CREATE TABLE coins (
+    id      text PRIMARY KEY,
+    ticker  text NOT NULL,
+    name    text NOT NULL
+);
+
+CREATE TABLE coin_details (
+    id            text PRIMARY KEY REFERENCES coins(id) ON DELETE CASCADE,
+    description   text,
+    image_url     text,
+    genesis_date  date,
+    categories    jsonb,
+    links         jsonb
+);
+
+CREATE TABLE coin_snapshot (
+    snapshot_at           timestamptz NOT NULL,
+    id                    text NOT NULL REFERENCES coins(id),
+    current_price         numeric,
+    market_cap            numeric,
+    market_cap_rank       integer,
+    total_volume          numeric,
+    high24hr              numeric,
+    low24hr               numeric,
+    price_change_pct_24h  numeric,
+    price_change_pct_7d   numeric,
+    price_change_pct_30d  numeric,
+    PRIMARY KEY (id, snapshot_at)
+);
+
+CREATE TABLE stocks (
+    symbol           text PRIMARY KEY,
+    name             text NOT NULL,
+    exchange         text NOT NULL,
+    mic_code         text,
+    currency         text NOT NULL,
+    instrument_type  text NOT NULL DEFAULT 'Common Stock',
+    is_active        boolean NOT NULL DEFAULT true,
+    created_at       timestamptz NOT NULL DEFAULT now(),
+    updated_at       timestamptz NOT NULL DEFAULT now()
+);
+
+CREATE TABLE stock_snapshot (
+    snapshot_at     timestamptz NOT NULL,
+    symbol          text NOT NULL REFERENCES stocks(symbol),
+    price           numeric(18, 6),
+    change          numeric(18, 6),
+    percent_change  numeric(10, 4),
+    volume          bigint,
+    is_market_open  boolean,
+    PRIMARY KEY (symbol, snapshot_at)
+);
+```
+
+</details>
 
 ## Stack
 
@@ -251,12 +377,3 @@ No dashboard screenshots are included yet — the section will be updated when G
 
 DeepWhale is an educational and research project. It does not provide investment advice or execute trades. Public on-chain data can be incomplete, delayed or misleading. Past performance of any wallet is not indicative of future results.
 
----
-
-<div align="center">
-
-Built with curiosity, SQL and a healthy respect for API rate limits.
-
-[Русская версия](README.ru.md)
-
-</div>
