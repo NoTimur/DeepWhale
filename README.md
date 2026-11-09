@@ -11,7 +11,7 @@ An open data platform for tracking the most profitable wallets on Hyperliquid �
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Airflow-3.3.2-017CEE?logo=apacheairflow&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-database-4169E1?logo=postgresql&logoColor=white)
-![Grafana](https://img.shields.io/badge/Grafana-planned-6E4AFF?logo=grafana&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-observability-6E4AFF?logo=grafana&logoColor=white)
 ![Status](https://img.shields.io/badge/status-MVP-black)
 
 </div>
@@ -48,10 +48,11 @@ flowchart LR
     TD[Twelve Data API] -->|US equities| AF
     AF --> PG[(PostgreSQL)]
     PG --> AN[Analytics / research]
-    PG -. planned .-> GF[Grafana]
+    PG --> GF[Grafana Ops]
+    PG -. planned .-> WEB[Web dashboard]
 ```
 
-Airflow runs the ingestion DAGs. PostgreSQL is the single source of truth. Grafana will become the presentation layer.
+Airflow runs the ingestion DAGs. PostgreSQL is the single source of truth. Grafana monitors the pipelines; the user-facing web dashboard is the next layer.
 
 ## Pipelines
 
@@ -64,6 +65,14 @@ Airflow runs the ingestion DAGs. PostgreSQL is the single source of truth. Grafa
 | `stock_snapshot` | every 10 min | Twelve Data | `stock_snapshot` | US equities with NYSE calendar gate |
 
 Fills are loaded incrementally: the DAG reads `max(ts)` per wallet, subtracts a 60-second overlap and deduplicates by Hyperliquid `tid`. Positions are snapshot-based: each run writes a new state for every open position.
+
+## Observability
+
+A compact Grafana dashboard provides observability for the pipelines: data freshness, DagRun health and basic data quality. It is intentionally separate from the user-facing whale analytics.
+
+| Pipeline health | Data quality |
+|---|---|
+| ![Grafana dashboard with freshness and DAG health](docs/images/grafana-ops-overview.png) | ![Grafana data quality panels](docs/images/grafana-ops-quality.png) |
 
 ## Database schema
 
@@ -303,7 +312,7 @@ CREATE TABLE stock_snapshot (
 | Storage | PostgreSQL |
 | Sources | Hyperliquid API, CoinGecko API, Twelve Data API |
 | Analytics | SQL, window functions, dimensional modelling |
-| Visualisation | Grafana (planned) |
+| Visualisation | Grafana Ops (observability); web dashboard planned |
 | Tooling | Git, psql, Airflow UI |
 
 ## Quick start
@@ -342,14 +351,13 @@ Open `http://localhost:8080`, enable the DAGs and trigger `wallets_snapshot` fir
 
 > **Coming soon.**
 
-The Grafana layer is the next milestone. Planned views:
+The user-facing web dashboard is the next milestone. Planned views:
 
 - whale leaderboard: PnL, ROI, volume, account value;
 - wallet detail: open positions, leverage, liquidation distance, recent fills;
-- market view: BTC/ETH price with long/short fill markers;
-- data health: freshness, row counts, failed DAG runs, API rate-limit usage.
+- market view: BTC/ETH price with long/short fill markers.
 
-No dashboard screenshots are included yet — the section will be updated when Grafana is connected.
+No web dashboard screenshots are included yet — the section will be updated when the web app is connected.
 
 ## Roadmap
 
@@ -358,7 +366,7 @@ No dashboard screenshots are included yet — the section will be updated when G
 - [x] Incremental fills ingestion with deduplication
 - [x] Position snapshots and long/short exposure
 - [x] Airflow DAGs for Hyperliquid, CoinGecko and US equities
-- [ ] Grafana dashboard
+- [x] Grafana observability dashboard
 - [ ] Wallet labels and entity resolution
 - [ ] Following-strategy backtester: equal-weight, risk-adjusted, rebalancing rules
 - [ ] Alerts for large position changes

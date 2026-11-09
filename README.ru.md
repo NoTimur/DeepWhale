@@ -11,7 +11,7 @@
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?logo=python&logoColor=white)
 ![Airflow](https://img.shields.io/badge/Airflow-3.3.2-017CEE?logo=apacheairflow&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-database-4169E1?logo=postgresql&logoColor=white)
-![Grafana](https://img.shields.io/badge/Grafana-planned-6E4AFF?logo=grafana&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-observability-6E4AFF?logo=grafana&logoColor=white)
 ![Status](https://img.shields.io/badge/status-MVP-black)
 
 </div>
@@ -48,10 +48,11 @@ flowchart LR
     TD[API Twelve Data] -->|акции США| AF
     AF --> PG[(PostgreSQL)]
     PG --> AN[Аналитика / исследования]
-    PG -. план .-> GF[Grafana]
+    PG --> GF[Grafana Ops]
+    PG -. план .-> WEB[Web dashboard]
 ```
 
-Airflow запускает DAG-и загрузки. PostgreSQL — единственный источник правды. Grafana станет слоем визуализации.
+Airflow запускает DAG-и загрузки. PostgreSQL — единственный источник правды. Grafana следит за пайплайнами, пользовательский web-дашборд — следующий слой.
 
 ## Пайплайны
 
@@ -64,6 +65,14 @@ Airflow запускает DAG-и загрузки. PostgreSQL — единст�
 | `stock_snapshot` | каждые 10 минут | Twelve Data | `stock_snapshot` | акции США с проверкой календаря NYSE |
 
 Fills загружаются инкрементально: DAG берёт `max(ts)` по кошельку, вычитает 60 секунд перекрытия и отсекает дубли по `tid`. Positions — это снимки: каждый запуск пишет новое состояние каждой открытой позиции.
+
+## Наблюдаемость
+
+Компактный Grafana-дашборд показывает состояние пайплайнов: свежесть данных, здоровье DagRun и базовое качество. Он отделён от пользовательской аналитики по китам.
+
+| Состояние пайплайнов | Качество данных |
+|---|---|
+| ![Grafana-дашборд: свежесть и состояние DAG](docs/images/grafana-ops-overview.png) | ![Grafana: панели качества данных](docs/images/grafana-ops-quality.png) |
 
 ## Схема БД
 
@@ -303,7 +312,7 @@ CREATE TABLE stock_snapshot (
 | Хранение | PostgreSQL |
 | Источники | Hyperliquid API, CoinGecko API, Twelve Data API |
 | Аналитика | SQL, оконные функции, dimensional modelling |
-| Визуализация | Grafana (в планах) |
+| Визуализация | Grafana Ops (наблюдаемость); web-дашборд в планах |
 | Инструменты | Git, psql, Airflow UI |
 
 ## Быстрый старт
@@ -342,14 +351,13 @@ airflow standalone
 
 > **Скоро.**
 
-Grafana — следующий этап. Планируемые экраны:
+Пользовательский web-дашборд — следующий этап. Планируемые экраны:
 
 - лидерборд китов: PnL, ROI, объём, размер счёта;
 - карточка кошелька: открытые позиции, плечо, расстояние до ликвидации, последние сделки;
-- рыночный экран: цена BTC/ETH с маркерами лонг/шорт сделок;
-- здоровье данных: свежесть, количество строк, упавшие DAG-и, расход лимитов API.
+- рыночный экран: цена BTC/ETH с маркерами лонг/шорт сделок.
 
-Скриншотов пока нет — раздел обновится, когда Grafana будет подключена.
+Скриншотов web-дашборда пока нет — раздел обновится, когда приложение будет подключено.
 
 ## Roadmap
 
@@ -358,7 +366,7 @@ Grafana — следующий этап. Планируемые экраны:
 - [x] Инкрементальная загрузка fills с дедупликацией
 - [x] Снимки позиций и оценка лонг/шорт-экспозиции
 - [x] DAG-и для Hyperliquid, CoinGecko и акций США
-- [ ] Дашборд Grafana
+- [x] Grafana-дашборд наблюдаемости
 - [ ] Разметка кошельков и entity resolution
 - [ ] Бэктестер стратегий следования: равные веса, risk-adjusted, правила ребалансировки
 - [ ] Алерты на резкие изменения позиций
