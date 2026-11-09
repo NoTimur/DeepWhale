@@ -464,7 +464,7 @@
             "type": "postgres",
             "uid": "${DS_AIRFLOW}"
           },
-          "rawSql": "SELECT\n  dag_id,\n  count(*) AS runs,\n  count(*) FILTER (WHERE state = 'success') AS success,\n  count(*) FILTER (WHERE state = 'failed') AS failed,\n  round(\n    100.0 * count(*) FILTER (WHERE state = 'success') / count(*),\n    1\n  ) AS success_pct\nFROM dag_run\nWHERE start_date > now() - interval '24 hours'\n  AND dag_id IN ($dag_id)\nGROUP BY dag_id\nORDER BY success_pct",
+          "rawSql": "SELECT\n  dag_id,\n  count(*) AS runs,\n  count(*) FILTER (WHERE state = 'success') AS success,\n  count(*) FILTER (WHERE state = 'failed') AS failed,\n  round(\n    100.0 * count(*) FILTER (WHERE state = 'success') / count(*),\n    1\n  ) AS success_pct\nFROM dag_run\nWHERE start_date > now() - interval '24 hours'\nGROUP BY dag_id\nORDER BY success_pct",
           "format": "table",
           "editorMode": "code",
           "rawQuery": true
@@ -565,7 +565,7 @@
             "type": "postgres",
             "uid": "${DS_AIRFLOW}"
           },
-          "rawSql": "SELECT\n  date_trunc('hour', start_date) AS time,\n  dag_id || ' / ' || state AS metric,\n  count(*) AS value\nFROM dag_run\nWHERE $__timeFilter(start_date)\n  AND dag_id IN ($dag_id)\nGROUP BY 1, 2\nORDER BY 1",
+          "rawSql": "SELECT\n  date_trunc('hour', start_date) AS time,\n  dag_id || ' / ' || state AS metric,\n  count(*) AS value\nFROM dag_run\nWHERE $__timeFilter(start_date)\nGROUP BY 1, 2\nORDER BY 1",
           "format": "time_series",
           "editorMode": "code",
           "rawQuery": true
@@ -656,7 +656,7 @@
             "type": "postgres",
             "uid": "${DS_AIRFLOW}"
           },
-          "rawSql": "SELECT\n  date_trunc('hour', start_date) AS time,\n  dag_id AS metric,\n  percentile_cont(0.95) WITHIN GROUP (\n    ORDER BY extract(epoch FROM end_date - start_date)\n  ) AS value\nFROM dag_run\nWHERE state = 'success'\n  AND $__timeFilter(start_date)\n  AND dag_id IN ($dag_id)\n  AND end_date IS NOT NULL\nGROUP BY 1, 2\nORDER BY 1",
+          "rawSql": "SELECT\n  date_trunc('hour', start_date) AS time,\n  dag_id AS metric,\n  percentile_cont(0.95) WITHIN GROUP (\n    ORDER BY extract(epoch FROM end_date - start_date)\n  ) AS value\nFROM dag_run\nWHERE state = 'success'\n  AND $__timeFilter(start_date)\n  AND end_date IS NOT NULL\nGROUP BY 1, 2\nORDER BY 1",
           "format": "time_series",
           "editorMode": "code",
           "rawQuery": true
@@ -747,7 +747,7 @@
             "type": "postgres",
             "uid": "${DS_AIRFLOW}"
           },
-          "rawSql": "SELECT DISTINCT ON (dag_id)\n  dag_id,\n  state,\n  start_date,\n  end_date,\n  round(extract(epoch FROM end_date - start_date)) AS duration_sec,\n  run_type\nFROM dag_run\nWHERE dag_id IN ($dag_id)\nORDER BY dag_id, start_date DESC",
+          "rawSql": "SELECT DISTINCT ON (dag_id)\n  dag_id,\n  state,\n  start_date,\n  end_date,\n  round(extract(epoch FROM end_date - start_date)) AS duration_sec,\n  run_type\nFROM dag_run\nORDER BY dag_id, start_date DESC",
           "format": "table",
           "editorMode": "code",
           "rawQuery": true
@@ -1165,30 +1165,7 @@
     "airflow"
   ],
   "templating": {
-    "list": [
-      {
-        "name": "dag_id",
-        "label": "DAG",
-        "type": "query",
-        "datasource": {
-          "type": "postgres",
-          "uid": "${DS_AIRFLOW}"
-        },
-        "query": "SELECT DISTINCT dag_id FROM dag_run ORDER BY dag_id;",
-        "definition": "SELECT DISTINCT dag_id FROM dag_run ORDER BY dag_id;",
-        "refresh": 1,
-        "multi": true,
-        "includeAll": true,
-        "allValue": "$__all",
-        "current": {
-          "selected": true,
-          "text": "All",
-          "value": "$__all"
-        },
-        "sort": 1,
-        "hide": 0
-      }
-    ]
+    "list": []
   },
   "time": {
     "from": "now-24h",
@@ -1198,6 +1175,6 @@
   "timezone": "utc",
   "title": "DeepWhale · Ops",
   "uid": "deepwhale-ops",
-  "version": 1,
+  "version": 2,
   "weekStart": ""
 }

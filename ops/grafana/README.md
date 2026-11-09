@@ -54,7 +54,9 @@ Click **Save & test** for both.
 6. Click **Import**.
 7. Open the dashboard **DeepWhale · Ops**.
 
-The `DAG` variable is already configured; it loads values from `airflow.dag_run`.
+If Grafana says that a dashboard with the same UID already exists, choose **Overwrite** (or delete the old copy first).
+
+The dashboard shows all DAGs at once. A DAG filter can be added later as a **Custom** variable, but the first version deliberately has no variable so that imported dashboards never send a literal `$dag_id` to PostgreSQL.
 
 ## What is inside
 
@@ -70,7 +72,6 @@ The `DAG` variable is already configured; it loads values from `airflow.dag_run`
 ## First checks after import
 
 - Set time range to **Last 24 hours** and refresh to **1m** (already set in the dashboard).
-- Make sure the `DAG` variable is set to **All**.
 - If a panel says **No data**, open the panel menu → **Inspect → Query** and check:
   - the correct data source is selected;
   - the SQL runs in `psql`;
